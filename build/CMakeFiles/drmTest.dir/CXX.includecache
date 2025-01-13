@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/firefly/mpp/live_client_mpp/src/drm_test.cpp
+errno.h
+-
+fcntl.h
+-
+stdbool.h
+-
+stdint.h
+-
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+sys/mman.h
+-
+signal.h
+-
+time.h
+-
+unistd.h
+-
+thread
+-
+xf86drm.h
+/home/firefly/mpp/live_client_mpp/src/xf86drm.h
+xf86drmMode.h
+/home/firefly/mpp/live_client_mpp/src/xf86drmMode.h
+

@@ -1,0 +1,4 @@
+/home/firefly/mpp/live_client_mpp/build/CMakeFiles/rebuild_cache.dir
+/home/firefly/mpp/live_client_mpp/build/CMakeFiles/edit_cache.dir
+/home/firefly/mpp/live_client_mpp/build/CMakeFiles/drmTest.dir
+/home/firefly/mpp/live_client_mpp/build/CMakeFiles/main.dir

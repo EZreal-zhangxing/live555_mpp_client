@@ -1,0 +1,2 @@
+# live555_mpp_client
+在Live555框架下使用rk3588进行拉流加速

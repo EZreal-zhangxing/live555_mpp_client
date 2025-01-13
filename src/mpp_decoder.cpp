@@ -43,7 +43,7 @@ mppDecoder::mppDecoder():display(nullptr),frameData(nullptr){
     res = mpp_dec_cfg_init(&mppCfg);
     res = mppApi->control(mppCtx,MPP_DEC_GET_CFG,mppCfg);
     
-    mpp_dec_cfg_set_u32(mppCfg, "base:split_parse", need_split);
+    // mpp_dec_cfg_set_u32(mppCfg, "base:split_parse", need_split);
 
     res = mppApi->control(mppCtx,MPP_DEC_SET_CFG,mppCfg);
     // sdl_init_process();

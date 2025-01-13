@@ -86,6 +86,12 @@ rtsp_client_live555.h
 signal.h
 /home/firefly/mpp/live_client_mpp/src/signal.h
 
+/home/firefly/mpp/live_client_mpp/src/v4l2.cpp
+v4l2.h
+/home/firefly/mpp/live_client_mpp/src/v4l2.h
+errno.h
+/home/firefly/mpp/live_client_mpp/src/errno.h
+
 /usr/local/include/opencv4/opencv2/calib3d.hpp
 opencv2/core.hpp
 /usr/local/include/opencv4/opencv2/opencv2/core.hpp

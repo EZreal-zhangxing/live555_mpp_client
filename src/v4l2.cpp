@@ -5,8 +5,12 @@ void modeset_page_flip_handler(int fd, uint32_t frame,uint32_t sec, uint32_t use
 	// printf("*******************modeset_page_flip_handler*****************************\n");
     uint32_t crtc_id = *(uint32_t *)data;
 	int res = drmModePageFlip(fd, crtc_id, buf[bufIdx].fb_id,DRM_MODE_PAGE_FLIP_EVENT, data);
+	if(res < 0){
+		printf("%s %d \n",strerror(res),res);
+	}
 }
 v4l2Display::v4l2Display(){
+	int res = 0;
 
     ev.version = DRM_EVENT_CONTEXT_VERSION;
 	ev.page_flip_handler = modeset_page_flip_handler;
@@ -19,15 +23,18 @@ v4l2Display::v4l2Display(){
 	connector = drmModeGetConnector(fd, connId);	//根据connector_id获取connector资源
 
 	/*初始化资源*/
-	int display_h = connector->modes[12].hdisplay; // 水平
-	int display_v = connector->modes[12].vdisplay; // 垂直
+	int display_h = connector->modes[v4l2Idx].hdisplay; // 水平
+	int display_v = connector->modes[v4l2Idx].vdisplay; // 垂直
 
-	create_fb(fd,image_width,image_height,buf);
-	create_fb(fd,image_width,image_height,buf+1);
+	create_fb(fd,display_h,display_v,buf);
+	create_fb(fd,display_h,display_v,buf+1);
+	printf(" display size %d %d buf 0 size %d \n",image_width,image_height,buf[0].size);
+	printf(" display size %d %d buf 1 size %d \n",image_width,image_height,buf[1].size);
 
-	drmModeSetCrtc(fd, crtcId,buf[0].fb_id,0, 0, &connId, 1, &connector->modes[12]);	//初始化和设置crtc，对应显存立即刷新
-
-	drmModePageFlip(fd, crtcId, buf[bufIdx].fb_id,DRM_MODE_PAGE_FLIP_EVENT, &crtcId);
+	res = drmModeSetCrtc(fd, crtcId,buf[0].fb_id,0, 0, &connId, 1, &connector->modes[v4l2Idx]);	//初始化和设置crtc，对应显存立即刷新
+	printf("%d ,%s \n",res,strerror(res));
+	res = drmModePageFlip(fd, crtcId, buf[0].fb_id,DRM_MODE_PAGE_FLIP_EVENT, &crtcId);
+	printf("%d ,%s \n",res,strerror(res));
 	
     printf("************************************* \n");
     printf("*     init v4l2 display finished !  * \n");
@@ -63,8 +70,8 @@ v4l2Display::v4l2Display(int image_width,int image_height,int image_hor_stride,i
 	int display_h = connector->modes[v4l2Idx].hdisplay; // 水平
 	int display_v = connector->modes[v4l2Idx].vdisplay; // 垂直
 
-	create_fb(fd,display_h,image_height,buf);
-	create_fb(fd,display_h,image_height,buf+1);
+	create_fb(fd,display_h,display_v,buf);
+	create_fb(fd,display_h,display_v,buf+1);
 	printf(" display size %d %d buf 0 size %d \n",image_width,image_height,buf[0].size);
 	printf(" display size %d %d buf 1 size %d \n",image_width,image_height,buf[1].size);
 

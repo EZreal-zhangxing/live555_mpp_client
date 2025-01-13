@@ -196,7 +196,7 @@ if(std::string("video") == scs.subsession->mediumName()){
 ``` mermaid
 graph LR
 A[Source] ----> B[Sink]
-B[Sink] -...-> A[Surce]
+B[Sink] -...-> A[Source]
 B --> |码流输出|C[output]
 D[input] -...-> |码流输入|B
 ```

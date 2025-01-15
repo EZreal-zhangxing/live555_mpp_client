@@ -20,7 +20,9 @@ void streamTimerHandler(void* clientData);
 
 // The main streaming routine (for each "rtsp://" URL):
 void openURL(UsageEnvironment& env, char const* progName, char const* rtspURL);
-void openURL(UsageEnvironment & env,RTSPClient *& rtspClient);
+// protocol = 0 is tcp 1 is udp
+// multicast means do not activate multicast protol
+void openURL(UsageEnvironment & env,RTSPClient *& rtspClient,int protocol = 0,int multicast = 0); 
 
 // Used to iterate through each stream's 'subsessions', setting up each one:
 void setupNextSubsession(RTSPClient* rtspClient);
@@ -288,7 +290,15 @@ void openURL(UsageEnvironment& env, char const* progName, char const* rtspURL) {
     rtspClient->sendDescribeCommand(continueAfterDESCRIBE); 
 }
 
-void openURL(UsageEnvironment & env,RTSPClient *& rtspClient){
+// By default, we request that the server stream its data using RTP/UDP.
+// If, instead, you want to request that the server stream via RTP-over-TCP, change the following to True:
+// #define REQUEST_STREAMING_OVER_TCP True
+static int TCP_ACTIVATE = 0;
+static int MULTICAST_ACTIVATE = 0;
+void openURL(UsageEnvironment & env,RTSPClient *& rtspClient,int protocol,int multicast){
+
+    TCP_ACTIVATE = protocol;
+    MULTICAST_ACTIVATE = multicast;
 
     if (rtspClient == NULL) {
         env << "Failed to create a RTSP client for URL \"" << rtspClient->url() << "\": " << env.getResultMsg() << "\n";
@@ -342,9 +352,7 @@ void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultS
     shutdownStream(rtspClient);
 }
 
-// By default, we request that the server stream its data using RTP/UDP.
-// If, instead, you want to request that the server stream via RTP-over-TCP, change the following to True:
-#define REQUEST_STREAMING_OVER_TCP True
+
 
 void setupNextSubsession(RTSPClient* rtspClient) {
     UsageEnvironment& env = rtspClient->envir(); // alias
@@ -365,7 +373,10 @@ void setupNextSubsession(RTSPClient* rtspClient) {
             env << ")\n";
 
             // Continue setting up this subsession, by sending a RTSP "SETUP" command:
-            rtspClient->sendSetupCommand(*scs.subsession, continueAfterSETUP, False, REQUEST_STREAMING_OVER_TCP);
+            // rtspClient->sendSetupCommand(*scs.subsession, continueAfterSETUP, False, REQUEST_STREAMING_OVER_TCP);
+            // TCP_ACTIVATE = 1 using tcp protocol 
+            // MULTICAST_ACTIVATE = 1 using multicast
+            rtspClient->sendSetupCommand(*scs.subsession, continueAfterSETUP, False, TCP_ACTIVATE,MULTICAST_ACTIVATE);
         }
         return;
     }

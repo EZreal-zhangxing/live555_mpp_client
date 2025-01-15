@@ -1,1 +1,1 @@
-int rtsp_client_process(char * programName,char * rtspUrl);
+int rtsp_client_process(char * programName,char * rtspUrl,int protocol=0,int multicast=0);

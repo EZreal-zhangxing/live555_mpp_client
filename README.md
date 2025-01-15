@@ -14,6 +14,8 @@
 - [x] Drm显示架构
 - [x] 平均延迟20ms以下
 - [x] 海康网络摄像头拉流
+- [x] 组播拉流
+- [x] 支持TCP/UDP协议
 
 ## 2.环境要求
 
@@ -42,10 +44,21 @@ make -j16
 
 ## 4. 运行
 
+命令参数如下：
+
+```shell
+Usage: ./main [OPTION]...
+Options:
+-p:      [可选]the protocol in [tcp,udp] default is udp 
+-u:      [必选]the url like this [rtsp://<username>:<password>@<ip address>/<your>/<defined>/<path>] 
+-m:      [可选]the stream use multicast  
+```
+
 通过如下命令运行即可：
 
 ```bash
-sudo ./main rtsp://<username>:<password>@ip:port/<url>
+sudo ./main -p tcp -u rtsp://<username>:<password>@ip:port/<url>
+sudo ./main -m -u rtsp://<username>:<password>@ip:port/<url> 
 ```
 
 ## 5. 流程梳理

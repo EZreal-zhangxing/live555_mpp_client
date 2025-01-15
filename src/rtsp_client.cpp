@@ -9,7 +9,7 @@ void processSigInt(int sigint){
 }
 
 // We need at least one "rtsp://" URL argument:
-int rtsp_client_process(char * programName,char * rtspUrl) {
+int rtsp_client_process(char * programName,char * rtspUrl,int protocol,int multicast) {
 
     signal(SIGINT,processSigInt);
 
@@ -20,7 +20,7 @@ int rtsp_client_process(char * programName,char * rtspUrl) {
     
     // openURL(*env, programName, rtspUrl);
     RTSPClient* rtspClient = ourRTSPClient::createNew(*env, rtspUrl, RTSP_CLIENT_VERBOSITY_LEVEL, programName);
-    openURL(*env,rtspClient);
+    openURL(*env,rtspClient,protocol,multicast);
 
     // All subsequent activity takes place within the event loop:
     env->taskScheduler().doEventLoop(&eventLoopWatchVariable);

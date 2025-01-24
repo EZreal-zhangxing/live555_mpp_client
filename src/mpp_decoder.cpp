@@ -15,6 +15,7 @@ extern long seconds(){
     gettimeofday(&t,NULL);
     return t.tv_sec * 1e6 + t.tv_usec;
 }
+
 /**
  * init mpp decoder
 */
@@ -53,10 +54,15 @@ mppDecoder::mppDecoder():display(nullptr),frameData(nullptr){
     printf("*     init mpp decode finished !    * \n");
     printf("************************************* \n");
 
-    // frameData = new ConcurrenceQueue<frameDataFromLive555>();
+    frameData = new ConcurrenceQueue<frameDataFromLive555>();
 }
 
 mppDecoder::~mppDecoder(){
+    // TODO 多线程下等待Display处理结束
+    if(pthread_kill(thread,0) != ESRCH){
+        // thread is woring so wait for it stop
+        usleep(10000);
+    }
     if(h264Packet){
         mpp_packet_deinit(&h264Packet);
         printf("[INFO] destroy mpp packet \n");
@@ -83,16 +89,27 @@ mppDecoder::~mppDecoder(){
         mpp_destroy(mppCtx);
         mppCtx = NULL;
     }
-
     if(display){
+        printf("[INFO] %x destroy display \n",display);
         delete display;
         display = NULL;
+    }
+
+    if(frameData || frameData->length() > 0){
+        printf("[INFO] %x destroy frameData %d \n",frameData,frameData->length());
+        while(frameData->length() > 0){
+            frameDataFromLive555* data555 = pop_data();
+            free(data555->data);
+        }
+        delete frameData;
+        frameData = NULL;
     }
 }
 
 void mppDecoder::push_data(void * data,size_t byteSize,unsigned long int presentationTime){
     frameDataFromLive555 frame555;
     frame555.data = (uint8_t * )malloc(byteSize);
+    memcpy(frame555.data,data,byteSize);
     frame555.bytes = byteSize;
     frame555.presentationTime = presentationTime;
     frameData->push(frame555);
@@ -209,7 +226,6 @@ MPP_RET mppDecoder::decoder_process(void * data,size_t byteSize,unsigned long in
 
 
 MPP_RET mppDecoder::decoder_queue(){
-    printf("queue size %d\n",frameData->length());
     MPP_RET res = MPP_OK;
     if(frameData->empty()){
         usleep(10000);
@@ -219,6 +235,8 @@ MPP_RET mppDecoder::decoder_queue(){
     /**
      * 数据封装进mppPacket
     */
+    mpp_frame_init(&yuvMppFrame);
+
     res = mpp_packet_init(&h264Packet,frame555Data->data,frame555Data->bytes);
 
     mpp_packet_set_data(h264Packet,frame555Data->data);
@@ -226,18 +244,14 @@ MPP_RET mppDecoder::decoder_queue(){
     mpp_packet_set_pos(h264Packet,frame555Data->data);
     mpp_packet_set_length(h264Packet,frame555Data->bytes);
     mpp_packet_set_pts(h264Packet,frame555Data->presentationTime * 1000);
-retry:
-    res = mppApi->decode_put_packet(mppCtx,h264Packet);
-    if(res != MPP_SUCCESS){
-        usleep(100000);
-        goto retry;
-    }
-    printf("\n decode_put_packet %d pack size %u \n",res,frame555Data->bytes);
 
+    res = mppApi->decode_put_packet(mppCtx,h264Packet);
+    // printf("\n decode_put_packet %d pack size %u \n",res,frame555Data->bytes);
     res = mppApi->decode_get_frame(mppCtx,&yuvMppFrame);
 
-    printf("\n decode_get_frame %d pack size %u \n",res,frame555Data->bytes);
+    // printf("\n decode_get_frame %d pack size %u \n",res,frame555Data->bytes);
     if(yuvMppFrame){
+        
         if(mpp_frame_get_info_change(yuvMppFrame)){
             /**
              * 初始化解码器，获取帧的长宽，以及stride信息。
@@ -248,6 +262,7 @@ retry:
             int hor_stride = mpp_frame_get_hor_stride(yuvMppFrame);
             int ver_stride = mpp_frame_get_ver_stride(yuvMppFrame);
             int bufferSize = mpp_frame_get_buf_size(yuvMppFrame);
+
             printf("mpp frame get info change :\n");
             printf("Frame Width : %d \n",width);
             printf("Frame Height : %d \n",height);
@@ -256,12 +271,13 @@ retry:
             printf("Frame buffer size : %d \n",bufferSize);
 
             // 初始化显示控件
-            // if(display != NULL){
-            //     delete display;
-            // }
-            // display = new v4l2Display(width,height,hor_stride,ver_stride);
+            if(display != NULL){
+                delete display;
+            }
+            display = new v4l2Display(width,height,hor_stride,ver_stride);
             // 重置buffer Group 并重新设置buffer的大小和个数
-            res = mpp_buffer_group_clear(bufferGroup); 
+            // res = mpp_buffer_group_clear(bufferGroup); 
+            res = mpp_buffer_group_get_internal(&bufferGroup,MPP_BUFFER_TYPE_DRM);
             CHECK_MPP(res);
             res = mpp_buffer_group_limit_config(bufferGroup,bufferSize,24);
             CHECK_MPP(res);
@@ -273,7 +289,7 @@ retry:
             RK_U32 discard = mpp_frame_get_discard(yuvMppFrame);
 
             if (errinfo || discard) {
-                printf("errod %x discard %x \n",errinfo,discard);
+                printf("error %x discard %x \n",errinfo,discard);
             }
             // 显示该帧
             if(display == nullptr){
@@ -282,10 +298,12 @@ retry:
             }
             MppBuffer yuvMppBuffer = mpp_frame_get_buffer(yuvMppFrame);
             size_t bytes = mpp_buffer_get_size(yuvMppBuffer);
-            printf("copy date %lu \n",bytes);
+            // printf("copy date %lu \n",bytes);
             uint8_t * data = (uint8_t * )mpp_buffer_get_ptr(yuvMppBuffer);
-            // display->display(data,bytes);
+            display->display(data,bytes);
+            
         }
+        mpp_frame_deinit(&yuvMppFrame);
     }
     mpp_packet_deinit(&h264Packet);
 
@@ -299,14 +317,18 @@ void mppDecoder::decoderClose(){
 static void * thread_decoder(void * mpp){
     mppDecoder * decoder =  (mppDecoder *)mpp;
     while(decoder->decoder_live){
+        long start = seconds();
         decoder->decoder_queue();
+        long times = seconds() - start;
+        if((20000 - times) > 0){
+            usleep(20000 - times);
+        }
     }
-    
+    printf("[INFO] decoder thread close \n");
     return NULL;
 }
 
 void mppDecoder::Start(){
-    pthread_t thread;
     pthread_create(&thread,NULL,thread_decoder,this);
     pthread_detach(thread);
 }

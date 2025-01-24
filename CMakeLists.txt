@@ -5,8 +5,11 @@ project(LIVE_CLIENT)
 set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_C_COMPILER gcc)
 
-set(CMAKE_C_FLAGS "-Wall -fPIC -O0 -g")
-set(CMAKE_CXX_FLAGS "-Wall -fPIC -O0 -g")
+# set(CMAKE_C_FLAGS "-Wall -fPIC -O0 -g")
+# set(CMAKE_CXX_FLAGS "-Wall -fPIC -O0 -g")
+
+set(CMAKE_C_FLAGS "-g")
+set(CMAKE_CXX_FLAGS "-g")
 
 set(MPP_INCLUDE_PATH "/usr/local/include/rockchip/")
 set(MPP_LIB "/usr/lib")

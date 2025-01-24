@@ -16,18 +16,19 @@ int main(int argc,char * argv[]){
         printf("-m:\t the stream use multicast \n");
         return 0;
     }
-    while((t = getopt(argc,argv,"p::u:m::")) != -1){
+    while((t = getopt(argc,argv,"p:u:m")) != -1){
         switch (t)
         {
-        case 'p':
-            if(optarg == std::string("tcp")){
+        case 'p':{
+            if(std::string(optarg) == std::string("tcp")){
                 protocol = 1;
-            }else if(optarg == std::string("udp")){
+            }else if(std::string(optarg) == std::string("udp")){
                 protocol = 0;
             }else{
                 printf("-p:\t the protocol mush in [tcp,udp] default is udp\n");
             }
             break;
+        }
         case 'u':
             rtsp_url = optarg;
             break;
@@ -47,6 +48,8 @@ int main(int argc,char * argv[]){
         }
     }
     if(rtsp_url != 0){
+        printf("protocol : %s\n",protocol ? "tcp" : "udp");
+        printf("multicast : %d\n",multicast);
         rtsp_client_process(argv[0],rtsp_url,protocol,multicast);
     }
     

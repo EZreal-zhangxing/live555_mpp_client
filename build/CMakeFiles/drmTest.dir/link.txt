@@ -1,1 +1,1 @@
-g++  -Wall -fPIC -O0 -g   CMakeFiles/drmTest.dir/src/drm_test.cpp.o  -o drmTest  -lpthread -ldrm 
+g++  -g   CMakeFiles/drmTest.dir/src/drm_test.cpp.o  -o drmTest  -lpthread -ldrm 

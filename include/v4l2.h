@@ -44,7 +44,7 @@ private:
     int image_hor_stride;
     int image_ver_stride;
 
-    int v4l2Idx = 7; // 根据显示器分辨率的不同请选择不同的分辨率
+    int v4l2Idx = 6; // 根据显示器分辨率的不同请选择不同的分辨率
 
     int is_start = 0;
 };

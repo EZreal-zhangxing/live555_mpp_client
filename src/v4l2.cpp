@@ -129,6 +129,21 @@ void v4l2Display::create_fb(int fd,uint32_t width,uint32_t height,framebuffer * 
     buf->handle = create.handle;
 }
 
+/**
+ * Thread 4 "main" received signal SIGSEGV, Segmentation fault.
+	[Switching to Thread 0x7ff60091c0 (LWP 3460)]
+	__memcpy_generic () at ../sysdeps/aarch64/multiarch/../memcpy.S:200
+	200     ../sysdeps/aarch64/multiarch/../memcpy.S: No such file or directory.
+	(gdb) bt
+	#0  __memcpy_generic () at ../sysdeps/aarch64/multiarch/../memcpy.S:200
+	#1  0x0000005555570558 in v4l2Display::display (this=0x7ff0002070, data=0x7ff4615000, byteSize=4177920) at /home/firefly/mpp/live_client_mpp/src/v4l2.cpp:135
+	#2  0x0000005555569cd8 in mppDecoder::decoder_queue (this=0x55556134a0) at /home/firefly/mpp/live_client_mpp/src/mpp_decoder.cpp:296
+	#3  0x0000005555569d78 in thread_decoder (mpp=0x55556134a0) at /home/firefly/mpp/live_client_mpp/src/mpp_decoder.cpp:312
+	#4  0x0000007ff7dc4624 in start_thread (arg=0x5555569d40 <thread_decoder(void*)>) at pthread_create.c:477
+	#5  0x0000007ff77c549c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone.S:78
+
+	TODO
+*/
 void v4l2Display::display(void * data,size_t byteSize){
 	bufIdx ^= 1;
     uint8_t * addr = buf[bufIdx].vaddr;
@@ -139,10 +154,14 @@ void v4l2Display::display(void * data,size_t byteSize){
 	// 事件轮询等待 但是失效
 	res = drmHandleEvent(fd,&ev);
 	// if(!is_start){
-	// 	res = drmModePageFlip(fd, crtcId, buf[bufIdx].fb_id,DRM_MODE_PAGE_FLIP_EVENT, &crtcId);
+		// ENAVAIL
+		// res = drmModePageFlip(fd, crtcId, buf[bufIdx].fb_id,DRM_MODE_PAGE_FLIP_EVENT, &crtcId);
 	// 	is_start = 1;
 	// }
-	// printf("%s %d \n",strerror(res),res);
+	if(res < 0){
+		printf("%s %d \n",strerror(res),res);
+	}
+	
 }
 
 void v4l2Display::release_fb(int fd, framebuffer *buf)

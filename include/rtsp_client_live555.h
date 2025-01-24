@@ -6,6 +6,9 @@
 #ifndef RTSP_CLIENT
 #define RTSP_CLIENT
 
+static bool TCP_ACTIVATE = 0;
+static bool MULTICAST_ACTIVATE = 0;
+
 // RTSP 'response handlers':
 void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultString);
 void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultString);
@@ -170,7 +173,10 @@ DummySink::DummySink(UsageEnvironment& env, MediaSubsession& subsession, char co
         timestamp = 0;
         totalSize = 0;
         mppDec = new mppDecoder();
-        // mppDec->Start();
+        if(MULTICAST_ACTIVATE){
+            // 组播使用多线程去做显示。否则网络包会堆积，然后报错segmentation fault
+            mppDec->Start();
+        }
     }
     
 }
@@ -178,7 +184,9 @@ DummySink::DummySink(UsageEnvironment& env, MediaSubsession& subsession, char co
 DummySink::~DummySink() {
     delete[] fReceiveBuffer;
     delete[] fStreamId;
-    delete mppDec;
+    if(mppDec){
+        delete mppDec;
+    }
 }
 
 void DummySink::afterGettingFrame(void* clientData, unsigned frameSize, unsigned numTruncatedBytes,struct timeval presentationTime, unsigned durationInMicroseconds) {
@@ -197,24 +205,30 @@ void DummySink::decode_frame(uint8_t * data,unsigned frameSize,unsigned long int
 
     // printf("\n\n");
     // for(int i=((frameSize > 60 ? frameSize - 60 : 0));i<frameSize;i++){
-    //     printf("%02x ",sink->fReceiveBuffer[i]);
+    //     printf("%02x ",data[i]);
     //     if((i+1) % 30 == 0){
     //         printf("\n");
     //     }
     // }
-    // mppDec->push_data(data,frameSize,presentationTime);
     // write(fd,data,frameSize);
-    mppDec->decoder_process(data,frameSize,presentationTime);
+    if(MULTICAST_ACTIVATE){
+        // 组播使用多线程进行处理
+        mppDec->push_data(data,frameSize,presentationTime);
+    }else{
+        // 单播直接使用单线程
+        mppDec->decoder_process(data,frameSize,presentationTime);
+    }
 }
 
 // If you don't want to see debugging output for each received frame, then comment out the following line:
 #define DEBUG_PRINT_EACH_RECEIVED_FRAME 1
+#define DEBUG_PRINT_NPT
 extern long seconds();
 void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes,
 				  struct timeval presentationTime, unsigned /*durationInMicroseconds*/) {
     // We've just received a frame of data.  (Optionally) print out information about it:
     long start = seconds();
-    unsigned long int curTimestamp = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
+    // unsigned long int curTimestamp = presentationTime.tv_sec * 1000000 + presentationTime.tv_usec;
     if(std::string("video") == std::string(fSubsession.mediumName())){
         /**
          * 可拼也可不拼包
@@ -254,7 +268,7 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 #endif
     envir() << "\n";
 #endif
-    // Then continue, to request the next frame of data:
+    // Then continue, to request the next frame of data:s
     continuePlaying();
 }
 
@@ -292,9 +306,8 @@ void openURL(UsageEnvironment& env, char const* progName, char const* rtspURL) {
 
 // By default, we request that the server stream its data using RTP/UDP.
 // If, instead, you want to request that the server stream via RTP-over-TCP, change the following to True:
-// #define REQUEST_STREAMING_OVER_TCP True
-static int TCP_ACTIVATE = 0;
-static int MULTICAST_ACTIVATE = 0;
+// #define REQUEST_STREAMING_OVER_TCP False
+
 void openURL(UsageEnvironment & env,RTSPClient *& rtspClient,int protocol,int multicast){
 
     TCP_ACTIVATE = protocol;
@@ -377,6 +390,7 @@ void setupNextSubsession(RTSPClient* rtspClient) {
             // TCP_ACTIVATE = 1 using tcp protocol 
             // MULTICAST_ACTIVATE = 1 using multicast
             rtspClient->sendSetupCommand(*scs.subsession, continueAfterSETUP, False, TCP_ACTIVATE,MULTICAST_ACTIVATE);
+            
         }
         return;
     }
@@ -423,9 +437,11 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
         env << *rtspClient << "Created a data sink for the \"" << *scs.subsession << "\" subsession\n";
         scs.subsession->miscPtr = rtspClient; // a hack to let subsession handler functions get the "RTSPClient" from the subsession 
         if(std::string("video") == scs.subsession->mediumName()){
-            H264VideoStreamDiscreteFramer* frameSource =  H264VideoStreamDiscreteFramer::createNew(env,scs.subsession->readSource(),True,True);
+            /*视频流*/
+            H264VideoStreamDiscreteFramer* frameSource =  H264VideoStreamDiscreteFramer::createNew(env,scs.subsession->readSource(),True,False);
             scs.subsession->sink->startPlaying(*frameSource,subsessionAfterPlaying, scs.subsession);
         }else{
+            /*音频流或者其他流*/
             scs.subsession->sink->startPlaying(*(scs.subsession->readSource()),subsessionAfterPlaying, scs.subsession);
         }
         

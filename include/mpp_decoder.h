@@ -27,6 +27,10 @@ public:
 
     void Start();
 
+    int queue_length(){
+        return frameData->length();
+    };
+
     ~mppDecoder();
 
     void decoderClose();
@@ -49,7 +53,7 @@ private:
     int enable_fast = 1;    /**是否支持快速输出模式*/
     int immediate_out = 1;
 
-    
+    pthread_t thread;
     ConcurrenceQueue<frameDataFromLive555> *frameData; 
 };
 
